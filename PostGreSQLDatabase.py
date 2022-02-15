@@ -7,9 +7,9 @@ import numpy as np
 class PostGreSQLDatabase:
     # Initialize MariaDBDatabase Object and creates
     # Cursor and Table to interact with the Database
-    def __init__(self, host,user, password, database):
+    def __init__(self, host, user, password, database):
         try:
-            self.con =psycopg2.connect(host=host, user=user, password=password, database=database)
+            self.con = psycopg2.connect(host=host, user=user, password=password, database=database)
         except psycopg2.Error:
             print("Datenbank konnte nicht geladen werden")
         self.myCursor = self.con.cursor()
@@ -70,7 +70,7 @@ class PostGreSQLDatabase:
             end = timer()
             print(comet_number)
             comet_number = comet_number + 1
-            self.myCursor.execute("INSERT INTO COMETS VALUES  " + s[0:-1])
+            self.myCursor.execute("INSERT INTO COMETS VALUES " + s[0:-1])
             end = timer()
             total_time += (end - start)
             print(end - start)
@@ -98,18 +98,6 @@ class PostGreSQLDatabase:
             self.search_particle(1000000000, 1063072000)
             self.search_particle(1063244800, 1094780800)
 
-    def changeSystemConfiguration(self):
-        self.myCursor.execute("ALTER SYSTEM SET max_connections = '200' ")
-        self.myCursor.execute("ALTER SYSTEM SET shared_buffers = '2GB' ")
-        self.myCursor.execute("ALTER SYSTEM SET effective_cache_size = '6GB' ")
-        self.myCursor.execute("ALTER SYSTEM SET maintenance_work_mem = '512MB' ")
-        self.myCursor.execute("ALTER SYSTEM SET checkpoint_completion_target = '0.9' ")
-        self.myCursor.execute("ALTER SYSTEM SET wal_buffers = '16MB' ")
-        self.myCursor.execute("ALTER SYSTEM SET default_statistics_target = '100' ")
-        self.myCursor.execute("ALTER SYSTEM SET random_page_cost = '1.1'")
-        self.myCursor.execute("ALTER SYSTEM SET work_mem = '5242kB' ")
-        self.myCursor.execute("ALTER SYSTEM SET min_wal_size = '1GB' ")
-        self.myCursor.execute("ALTER SYSTEM SET max_wal_size = '4GB' ")
 
-postGresTest = PostGreSQLDatabase("127.0.0.1","postgres","mysecretpassword","postgres")
+postGresTest = PostGreSQLDatabase("127.0.0.1", "postgres", "mysecretpassword", "postgres")
 postGresTest.insert_comet("/Users/rubenverma/Downloads/1002378")
