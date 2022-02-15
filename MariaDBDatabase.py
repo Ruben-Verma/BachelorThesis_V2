@@ -3,20 +3,22 @@ import mariadb
 from timeit import default_timer as timer
 import numpy as np
 
+from DataBaseUtils import DataBaseUtils
+
+
 class MariaDBDatabase:
 
     # Initialize MariaDBDatabase Object and creates
     # Cursor and Table to interact with the Database
-    def __init__(self,host,port,user,password,database):
+    def __init__(self, host, port, user, password, database):
         try:
-            self.con = mariadb.connect(host = host,port=port,user=user,password=password,database = database)
-        except:
+            self.con = mariadb.connect(host=host, port=port, user=user, password=password, database=database)
+        except mariadb.Error:
             print("Datenbank konnte nicht geladen werden")
-            SystemExit
         self.myCursor = self.con.cursor()
-        self.createTable()
+        self.create_table()
 
-    def createTable(self):
+    def create_table(self):
         try:
             self.myCursor.execute("""CREATE TABLE COMETS(
             ParticleState_x FLOAT,
@@ -27,49 +29,40 @@ class MariaDBDatabase:
             ParticleState_Vz FLOAT,
             ETinSeconds FLOAT)
             """)
-        except:
+        except mariadb.Error:
             pass
-    # Creates Inputlist for the insertion into the table
-    def tupleListMaker(self,byteArray):
-        tupleList = []
-
-        for i in range(0, len(byteArray), 7):
-            tupleList.append((byteArray[i].item(), byteArray[i + 1].item(),
-                              byteArray[i + 2].item(), byteArray[i + 3].item(),
-                              byteArray[i + 4].item(), byteArray[i + 5].item(),
-                              byteArray[i + 6].item()))
-        return tupleList
 
     # Insert Comet into the table
-    def inserComet(self,path):
-        totalTime = 0
-        cometNumber = 1
-        fileList = []
+    def inser_comet(self, path):
+        total_time = 0
+        comet_number = 1
+        file_list = []
         with os.scandir(path) as it:
             for entry in it:
                 if entry.name.endswith(".ctwu") and entry.is_file():
-                    fileList.append(entry.path) # Collects all Workunit file paths that will be inserted
+                    file_list.append(entry.path) # Collects all Workunit file paths that will be inserted
 
-        fileList.sort()
+        file_list.sort()
 
-        for path in fileList:
+        for path in file_list:
             start = timer()
             with open(path, 'rb') as file:
-                floatValues = np.array(np.fromfile(file, dtype=np.float32))
-            s = self.tupleListMaker(floatValues)
+                float_values = np.array(np.fromfile(file, dtype=np.float32))
+            s = DataBaseUtils.tuple_list_maker(float_values)
             end = timer()
-            print(cometNumber)
-            cometNumber = cometNumber + 1
+            print(comet_number)
+            comet_number = comet_number + 1
             self.myCursor.executemany(
                 "INSERT INTO COMETS(ParticleState_x,ParticleState_y,ParticleState_z,ParticleState_Vx,ParticleState_Vy,ParticleState_Vz,ETinSeconds) VALUES(?,?,?,?,?,?,?)",
                 s)
             self.con.commit()
             end = timer()
-            totalTime += (end - start)
+            total_time += (end - start)
             print(end - start)
-        print(totalTime)
+        print(total_time)
+
     # Searches particle given a timespan time1 - time 2
-    def searchParticle(self, time1, time2):
+    def search_particle(self, time1, time2):
         start = timer()
         self.myCursor.execute(
             "SELECT * FROM particleComets WHERE ETinSeconds BETWEEN ? AND ? ORDER BY ETinSeconds ASC",
@@ -81,14 +74,16 @@ class MariaDBDatabase:
 
     # Defines a testcase how fast Database retrieves Data when queries overlap
     # Timespan is one year
-    def oneYearTestcase(self):
-        self.searchParticle(1000000000, 1031536000)
-        self.searchParticle(1000172800, 1031708800)
+    def one_year_testcase(self):
+        self.search_particle(1000000000, 1031536000)
+        self.search_particle(1000172800, 1031708800)
 
     # Same semantics as oneYearTestcase Method but timespan are two years
-    def twoYearTestcase(self):
-        self.searchParticle(1000000000, 1063072000)
-        self.searchParticle(1063244800, 1094780800)
+    def two_year_testcase(self):
+        self.search_particle(1000000000, 1063072000)
+        self.search_particle(1063244800, 1094780800)
 
-#databaseMariaTest = MariaDBDatabase("127.0.0.1",3306,"root","my-secret-pw","COMETS")
-#databaseMariaTest.inserComet("/Users/rubenverma/Downloads/1002378")
+
+testDatabase = MariaDBDatabase("127.0.0.1", 3306, "root", "my-secret-pw", "COMETS")
+
+testDatabase.inser_comet("/Users/rubenverma/Documents/Bachelorarbeit/1002378")
