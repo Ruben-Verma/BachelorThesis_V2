@@ -12,6 +12,7 @@ class PostGreSQLDatabase:
     def __init__(self, host, user, password, database):
         try:
             self.con = psycopg2.connect(host=host, user=user, password=password, database=database)
+            self.con.autocommit = True
         except psycopg2.Error:
             print("Datenbank konnte nicht geladen werden")
         self.myCursor = self.con.cursor()
@@ -54,9 +55,6 @@ class PostGreSQLDatabase:
         return "".join(sql_string2)
 
     def insert_comet(self, path):
-        self.myCursor.execute(
-            "PREPARE insertplan AS INSERT INTO COMETS(ParticleState_x,ParticleState_y,ParticleState_z,ParticleState_Vx,ParticleState_Vy,ParticleState_Vz,ETinSeconds) VALUES($1,$2,$3,$4,$5,$6,$7)")
-
         total_time = 0
         comet_number = 1
         file_list = []
@@ -71,11 +69,11 @@ class PostGreSQLDatabase:
             start = timer()
             with open(path, 'rb') as file:
                 float_values = np.array(np.fromfile(file, dtype=np.float32))
-            s = DataBaseUtils.tuple_list_maker(float_values)
+            s = self.sql_string_maker(float_values)
             end = timer()
             print(comet_number)
             comet_number = comet_number + 1
-            psycopg2.extras.execute_batch(self.myCursor, "EXECUTE insertplan (%s,%s,%s,%s,%s,%s,%s)",s,10000000)
+            self.myCursor.execute("INSERT INTO COMETS VALUES  " + s[0:-1])
             end = timer()
             total_time += (end - start)
             print(end - start)
@@ -105,4 +103,4 @@ class PostGreSQLDatabase:
 
 
 postGresTest = PostGreSQLDatabase("127.0.0.1", "postgres", "mysecretpassword", "postgres")
-postGresTest.insert_comet("/Users/rubenverma/Downloads/1002378")
+postGresTest.insert_comet("/Users/rubenverma/Documents/Bachelorarbeit/1002378")

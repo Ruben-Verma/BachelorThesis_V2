@@ -30,7 +30,7 @@ class SQLiteDatabase:
             pass
 
     # Insert Comet into the table
-    def inser_comet(self, path):
+    def insert_comet(self, path):
         total_time = 0
         comet_number = 1
         file_list = []
