@@ -79,3 +79,6 @@ class SQLiteDatabase:
     def two_year_testcase(self):
         self.search_particle(1000000000, 1063072000)
         self.search_particle(1063244800, 1094780800)
+
+
+sqlitetest = SQLiteDatabase("ruben")

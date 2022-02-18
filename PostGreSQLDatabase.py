@@ -2,6 +2,8 @@ import os
 import psycopg2
 from timeit import default_timer as timer
 import numpy as np
+import psycopg2.extras
+from DataBaseUtils import DataBaseUtils
 
 
 class PostGreSQLDatabase:
@@ -52,6 +54,9 @@ class PostGreSQLDatabase:
         return "".join(sql_string2)
 
     def insert_comet(self, path):
+        self.myCursor.execute(
+            "PREPARE insertplan AS INSERT INTO COMETS(ParticleState_x,ParticleState_y,ParticleState_z,ParticleState_Vx,ParticleState_Vy,ParticleState_Vz,ETinSeconds) VALUES($1,$2,$3,$4,$5,$6,$7)")
+
         total_time = 0
         comet_number = 1
         file_list = []
@@ -66,37 +71,37 @@ class PostGreSQLDatabase:
             start = timer()
             with open(path, 'rb') as file:
                 float_values = np.array(np.fromfile(file, dtype=np.float32))
-            s = self.sql_string_maker(float_values)
+            s = DataBaseUtils.tuple_list_maker(float_values)
             end = timer()
             print(comet_number)
             comet_number = comet_number + 1
-            self.myCursor.execute("INSERT INTO COMETS VALUES " + s[0:-1])
+            psycopg2.extras.execute_batch(self.myCursor, "EXECUTE insertplan (%s,%s,%s,%s,%s,%s,%s)",s,10000000)
             end = timer()
             total_time += (end - start)
             print(end - start)
         print(total_time)
 
-        # Searches particle given a timespan time1 - time 2
-        def search_particle(self, time1, time2):
-            start = timer()
-            self.myCursor.execute(
-                "SELECT * FROM particleComets WHERE ETinSeconds BETWEEN ? AND ? ORDER BY ETinSeconds ASC",
-                (time1, time2))
-            result = self.myCursor.fetchall()
-            end = timer()
-            print(end - start)
-            return result
+    # Searches particle given a timespan time1 - time 2
+    def search_particle(self, time1, time2):
+        start = timer()
+        self.myCursor.execute(
+            "SELECT * FROM particleComets WHERE ETinSeconds BETWEEN ? AND ? ORDER BY ETinSeconds ASC",
+            (time1, time2))
+        result = self.myCursor.fetchall()
+        end = timer()
+        print(end - start)
+        return result
 
-        # Defines a testcase how fast Database retrieves Data when queries overlap
-        # Timespan is one year
-        def one_year_testcase(self):
-            self.search_particle(1000000000, 1031536000)
-            self.search_particle(1000172800, 1031708800)
+    # Defines a testcase how fast Database retrieves Data when queries overlap
+    # Timespan is one year
+    def one_year_testcase(self):
+        self.search_particle(1000000000, 1031536000)
+        self.search_particle(1000172800, 1031708800)
 
-        # Same semantics as oneYearTestcase Method but timespan are two years
-        def two_year_testcase(self):
-            self.search_particle(1000000000, 1063072000)
-            self.search_particle(1063244800, 1094780800)
+    # Same semantics as oneYearTestcase Method but timespan are two years
+    def two_year_testcase(self):
+        self.search_particle(1000000000, 1063072000)
+        self.search_particle(1063244800, 1094780800)
 
 
 postGresTest = PostGreSQLDatabase("127.0.0.1", "postgres", "mysecretpassword", "postgres")
