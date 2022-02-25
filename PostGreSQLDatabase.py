@@ -1,4 +1,6 @@
+import io
 import os
+
 import psycopg2
 from timeit import default_timer as timer
 import numpy as np
@@ -16,48 +18,61 @@ class PostGreSQLDatabase:
         except psycopg2.Error:
             print("Datenbank konnte nicht geladen werden")
         self.myCursor = self.con.cursor()
-        self.create_table()
+        self.create_table_structure()
 
-    def create_table(self):
+    def create_table_structure(self):
         try:
-            self.myCursor.execute("""CREATE TABLE COMETS(
-            ParticleState_x FLOAT,
-            ParticleState_y FLOAT,
-            ParticleState_z FLOAT,
-            ParticleState_Vx FLOAT,
-            ParticleState_Vy FLOAT,
-            ParticleState_Vz FLOAT,
-            ETinSeconds FLOAT)
-            """)
-        except psycopg2.Error:
+            self.myCursor.execute("""CREATE TABLE Population(
+                Cometid integer,
+                Mass FLOAT,
+                Beta FLOAT
+                )""")
+
+            self.myCursor.execute("""
+            CREATE TABLE ParticleHeader(
+                Cometid integer,
+                Mass FLOAT,
+                ParticleNo INTEGER,
+                Multiplicationfactor FLOAT
+                )""")
+
+            self.myCursor.execute("""CREATE TABLE ParticleStates(
+                Cometid integer,
+                Mass FLOAT,
+                ParticleNo INTEGER,
+                ParticleState_x FLOAT,
+                ParticleState_y FLOAT,
+                ParticleState_z FLOAT,
+                ParticleState_Vx FLOAT,
+                ParticleState_Vy FLOAT,
+                ParticleState_Vz FLOAT,
+                ETinSeconds FLOAT
+             )
+                  """)
+        except psycopg2.DatabaseError:
             pass
 
-    # Create Insert String for the SQL statement
-    def sql_string_maker(self, byte_array):
-        sql_string2 = []
-        for i in range(0, len(byte_array), 7):
-            sql_string2.append("(")
-            sql_string2.append(str(byte_array[i]))
-            sql_string2.append(",")
-            sql_string2.append(str(byte_array[i + 1]))
-            sql_string2.append(",")
-            sql_string2.append(str(byte_array[i + 2]))
-            sql_string2.append(",")
-            sql_string2.append(str(byte_array[i + 3]))
-            sql_string2.append(",")
-            sql_string2.append(str(byte_array[i + 4]))
-            sql_string2.append(",")
-            sql_string2.append(str(byte_array[i + 5]))
-            sql_string2.append(",")
-            sql_string2.append(str(byte_array[i + 6]))
-            sql_string2.append(")")
-            sql_string2.append(",")
-        return "".join(sql_string2)
+    # Searches particle given a timespan time1 - time 2
+    def search_particle(self, time1, time2):
+        start = timer()
+        self.myCursor.execute(
+            "SELECT * FROM particlestates WHERE ETinSeconds BETWEEN ? AND ? ORDER BY ETinSeconds ASC",
+            (time1, time2))
+        result = self.myCursor.fetchall()
+        end = timer()
+        print(end - start)
+        return result
 
+    # Inserts data into the table using parameter lists and csv buffer to increase insert performance
     def insert_comet(self, path):
+        population_header_list = []
+        particle_header_list = []
+
         total_time = 0
         comet_number = 1
+        comet_id = path[len(path) - 7:len(path)]
         file_list = []
+
         with os.scandir(path) as it:
             for entry in it:
                 if entry.name.endswith(".ctwu") and entry.is_file():
@@ -66,29 +81,32 @@ class PostGreSQLDatabase:
         file_list.sort()
 
         for path in file_list:
-            start = timer()
             with open(path, 'rb') as file:
                 float_values = np.array(np.fromfile(file, dtype=np.float32))
-            s = self.sql_string_maker(float_values)
-            end = timer()
+
+            comet_mass = DataBaseUtils.mass_to_int(float_values[2])
+            beta = float_values[4].item()
+
+            start = timer()
+            population_header_list.append((comet_id, comet_mass, beta))
             print(comet_number)
+
             comet_number = comet_number + 1
-            self.myCursor.execute("INSERT INTO COMETS VALUES  " + s[0:-1])
+            ph_list, particle_state_list = DataBaseUtils.tuple_list_maker_structure(float_values, comet_id, comet_mass)
+
+            buff = DataBaseUtils.tuplelist_into_csv_buffer(particle_state_list)
+            self.myCursor.copy_from(buff, "particlestates", sep="|", columns=(
+                "cometid", "mass", "particleno", "particlestate_x", "particlestate_y", "particlestate_z",
+                "particlestate_vx",
+                "particlestate_vy", "particlestate_vz", "etinseconds"))
             end = timer()
+            particle_header_list.extend(ph_list)
             total_time += (end - start)
             print(end - start)
         print(total_time)
-
-    # Searches particle given a timespan time1 - time 2
-    def search_particle(self, time1, time2):
-        start = timer()
-        self.myCursor.execute(
-            "SELECT * FROM particleComets WHERE ETinSeconds BETWEEN ? AND ? ORDER BY ETinSeconds ASC",
-            (time1, time2))
-        result = self.myCursor.fetchall()
-        end = timer()
-        print(end - start)
-        return result
+        psycopg2.extras.execute_batch(self.myCursor, "Insert into particleheader values (%s,%s,%s,%s)",
+                                      particle_header_list)
+        psycopg2.extras.execute_batch(self.myCursor, "Insert into population values (%s,%s,%s)", population_header_list)
 
     # Defines a testcase how fast Database retrieves Data when queries overlap
     # Timespan is one year
@@ -103,4 +121,5 @@ class PostGreSQLDatabase:
 
 
 postGresTest = PostGreSQLDatabase("127.0.0.1", "postgres", "mysecretpassword", "postgres")
-postGresTest.insert_comet("/Users/rubenverma/Documents/Bachelorarbeit/1002378")
+
+postGresTest.insert_comet("/Users/rubenverma/Documents/Bachelorarbeit/12345678")
