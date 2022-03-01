@@ -6,6 +6,8 @@ from timeit import default_timer as timer
 import numpy as np
 import psycopg2.extras
 from DataBaseUtils import DataBaseUtils
+import spiceypy as spice
+import cProfile
 
 
 class PostGreSQLDatabase:
@@ -25,7 +27,8 @@ class PostGreSQLDatabase:
             self.myCursor.execute("""CREATE TABLE Population(
                 Cometid integer,
                 Mass FLOAT,
-                Beta FLOAT
+                Beta FLOAT,
+                MaxTimeDifference FlOAT
                 )""")
 
             self.myCursor.execute("""
@@ -65,8 +68,9 @@ class PostGreSQLDatabase:
 
     # Inserts data into the table using parameter lists and csv buffer to increase insert performance
     def insert_comet(self, path):
-        population_header_list = []
         particle_header_list = []
+        maximum_time_difference_list = [0, 0, 0, 0, 0, 0, 0, 0]
+        beta_value_list = [0, 0, 0, 0, 0, 0, 0, 0]
 
         total_time = 0
         comet_number = 1
@@ -85,16 +89,19 @@ class PostGreSQLDatabase:
                 float_values = np.array(np.fromfile(file, dtype=np.float32))
 
             comet_mass = DataBaseUtils.mass_to_int(float_values[2])
-            beta = float_values[4].item()
+            beta_value_list[comet_mass] = float_values[4].item()
+
+            DataBaseUtils.calculate_maximum_time_difference(float_values, maximum_time_difference_list, comet_mass)
 
             start = timer()
-            population_header_list.append((comet_id, comet_mass, beta))
+
             print(comet_number)
 
             comet_number = comet_number + 1
             ph_list, particle_state_list = DataBaseUtils.tuple_list_maker_structure(float_values, comet_id, comet_mass)
 
             buff = DataBaseUtils.tuplelist_into_csv_buffer(particle_state_list)
+
             self.myCursor.copy_from(buff, "particlestates", sep="|", columns=(
                 "cometid", "mass", "particleno", "particlestate_x", "particlestate_y", "particlestate_z",
                 "particlestate_vx",
@@ -106,7 +113,9 @@ class PostGreSQLDatabase:
         print(total_time)
         psycopg2.extras.execute_batch(self.myCursor, "Insert into particleheader values (%s,%s,%s,%s)",
                                       particle_header_list)
-        psycopg2.extras.execute_batch(self.myCursor, "Insert into population values (%s,%s,%s)", population_header_list)
+        psycopg2.extras.execute_batch(self.myCursor, "Insert into population values (%s,%s,%s,%s)",
+                                      [(comet_id, i, beta_value_list[i], maximum_time_difference_list[i].item()) for i
+                                       in range(0, len(maximum_time_difference_list))])
 
     # Defines a testcase how fast Database retrieves Data when queries overlap
     # Timespan is one year
@@ -122,4 +131,4 @@ class PostGreSQLDatabase:
 
 postGresTest = PostGreSQLDatabase("127.0.0.1", "postgres", "mysecretpassword", "postgres")
 
-postGresTest.insert_comet("/Users/rubenverma/Documents/Bachelorarbeit/12345678")
+cProfile.run("""postGresTest.insert_comet("/Users/rubenverma/Documents/Bachelorarbeit/1002378")""")
