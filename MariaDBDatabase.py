@@ -23,7 +23,8 @@ class MariaDBDatabase:
             self.myCursor.execute("""CREATE TABLE Population(
                 Cometid integer,
                 Mass FLOAT,
-                Beta FLOAT
+                Beta FLOAT,
+                MaxTimeDifference FLOAT
                 )""")
 
             self.myCursor.execute("""
@@ -51,8 +52,9 @@ class MariaDBDatabase:
             pass
 
     def insert_comet(self, path):
-        population_header_list = []
         particle_header_list = []
+        maximum_time_difference_list = [0, 0, 0, 0, 0, 0, 0, 0]
+        beta_value_list = [0, 0, 0, 0, 0, 0, 0, 0]
 
         total_time = 0
         comet_number = 1
@@ -71,10 +73,12 @@ class MariaDBDatabase:
                 float_values = np.array(np.fromfile(file, dtype=np.float32))
 
             comet_mass = DataBaseUtils.mass_to_int(float_values[2])
-            beta = float_values[4].item()
+            beta_value_list[comet_mass] = float_values[4].item()
+
+            DataBaseUtils.calculate_maximum_time_difference(float_values, maximum_time_difference_list, comet_mass)
 
             start = timer()
-            population_header_list.append((comet_id, comet_mass, beta))
+
             print(comet_number)
 
             comet_number = comet_number + 1
@@ -90,8 +94,11 @@ class MariaDBDatabase:
             print(end - start)
         print(total_time)
         self.myCursor.executemany(
-            "INSERT INTO ParticleHeader(Cometid,Mass,ParticleNo,Multiplicationfactor) values (?,?,?,?)",particle_header_list)
-        self.myCursor.executemany("INSERT INTO Population(Cometid,Mass,beta) values (?,?,?)",population_header_list)
+            "INSERT INTO ParticleHeader(Cometid,Mass,ParticleNo,Multiplicationfactor) values (?,?,?,?)",
+            particle_header_list)
+        self.myCursor.executemany("INSERT INTO Population(Cometid,Mass,beta,MaxTimeDifference) values (?,?,?,?)",
+                                  [(comet_id, i, beta_value_list[i], maximum_time_difference_list[i].item()) for i
+                                   in range(0, len(maximum_time_difference_list))])
         self.con.commit()
 
     # Insert Comet into the table
