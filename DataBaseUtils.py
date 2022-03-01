@@ -26,7 +26,7 @@ class DataBaseUtils:
             if (byte_array[i] == 0):
                 particle_no = byte_array[i + 4]
                 particle_header_values.append((comet_id, mass,
-                                               byte_array[i+4].item(), byte_array[i+5].item()))
+                                               byte_array[i + 4].item(), byte_array[i + 5].item()))
                 continue
 
             particle_state_values.append((comet_id, mass, int(particle_no.item()),
@@ -123,3 +123,11 @@ class DataBaseUtils:
         writer.writerows(list)
         buffer.seek(0)
         return buffer
+
+    @staticmethod
+    def calculate_maximum_time_difference(byte_array, time_difference_list, mass):
+        for i in range(7, len(byte_array) - 7, 7):
+            if byte_array[i] == 0:
+                continue
+            if (byte_array[i + 13] - byte_array[i + 6]) > time_difference_list[mass]:
+                time_difference_list[mass] = (byte_array[i + 7] - byte_array[i])
