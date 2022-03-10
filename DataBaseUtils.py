@@ -126,8 +126,13 @@ class DataBaseUtils:
 
     @staticmethod
     def calculate_maximum_time_difference(byte_array, time_difference_list, mass):
+        continued = False
         for i in range(7, len(byte_array) - 7, 7):
+            if continued:
+                continued = False
+                continue
             if byte_array[i] == 0:
+                continued = True
                 continue
             if (byte_array[i + 13] - byte_array[i + 6]) > time_difference_list[mass]:
-                time_difference_list[mass] = (byte_array[i + 7] - byte_array[i])
+                time_difference_list[mass] = (byte_array[i + 13] - byte_array[i+6])
