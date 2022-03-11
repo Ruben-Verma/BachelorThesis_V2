@@ -2,6 +2,9 @@ import csv
 import math
 import io
 
+import numpy
+import spiceypy as spice
+from timeit import default_timer as timer
 
 class DataBaseUtils:
     # Creates Inputlist for the insertion into the table
@@ -148,3 +151,24 @@ class DataBaseUtils:
                 continue
             if (byte_array[i + 13] - byte_array[i + 6]) > time_difference_list[mass]:
                 time_difference_list[mass] = (byte_array[i + 13] - byte_array[i+6])
+
+    @staticmethod
+    def calculate_nearest_particle(particle_list, time):
+        min = particle_list[0][9]
+        nearest_particle = particle_list[0]
+        for particle in particle_list:
+            if (time - particle[9]) < min:
+                min = particle[9]
+                nearest_particle = particle
+        return nearest_particle
+
+    @staticmethod
+    def calculate_spice_extrapolation(particle, time):
+        start = timer()
+        spice_array = [particle[3], particle[4], particle[5], particle[6], particle[7], particle[8]]
+        mu_sun = 132712440023.31  # used for spice calculation
+        orbital_elements = spice.oscelt(numpy.array(spice_array), particle[9], mu_sun)
+        state = spice.conics(orbital_elements, time)
+        end = timer()
+        print(end - start)
+        return state

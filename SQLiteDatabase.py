@@ -3,7 +3,7 @@ import sqlite3
 from timeit import default_timer as timer
 import numpy as np
 from DataBaseUtils import DataBaseUtils
-import cProfile
+
 
 
 class SQLiteDatabase:
@@ -121,6 +121,15 @@ class SQLiteDatabase:
         self.search_particle(1000000000, 1063072000)
         self.search_particle(1063244800, 1094780800)
 
+    def particle_analyzer_spice(self, time):
+        self.myCursor.execute("SELECT MAX(MaxTimeDifference) FROM Population")
+        max_time_difference = self.myCursor.fetchall()[0][0]
+
+        state_list = self.search_particle(max(time-max_time_difference, 0), time)
+        particle = DataBaseUtils.calculate_nearest_particle(state_list, time)
+        return DataBaseUtils.calculate_spice_extrapolation(particle,time)
 
 sqlitetest = SQLiteDatabase("ruben")
-sqlitetest.insert_comet("/Users/rubenverma/Documents/Bachelorarbeit/1002378")
+
+test = sqlitetest.particle_analyzer_spice(26540100)
+print(test)
