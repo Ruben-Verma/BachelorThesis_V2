@@ -6,3 +6,5 @@
 .idea/
 
 __pycache__/DataBaseUtils.cpython-39.pyc
+
+*.pyc

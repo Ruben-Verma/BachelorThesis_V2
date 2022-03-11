@@ -21,19 +21,31 @@ class DataBaseUtils:
         particle_no = 0
         particle_state_values = []
         particle_header_values = []
-
+        continued = False
         for i in range(7, len(byte_array), 7):
+            if continued:
+                continued = False
+                continue
             if (byte_array[i] == 0):
                 particle_no = byte_array[i + 4]
                 particle_header_values.append((comet_id, mass,
                                                byte_array[i + 4].item(), byte_array[i + 5].item()))
+                continued = True
                 continue
-
-            particle_state_values.append((comet_id, mass, int(particle_no.item()),
-                                          byte_array[i].item(), byte_array[i + 1].item(),
-                                          byte_array[i + 2].item(), byte_array[i + 3].item(),
-                                          byte_array[i + 4].item(), byte_array[i + 5].item(),
-                                          byte_array[i + 6].item()))
+            try:
+                if ((particle_state_values[-1][9] - byte_array[i + 6]) != 0.0):
+                    particle_state_values.append((comet_id, mass, int(particle_no.item()),
+                                                  byte_array[i].item(), byte_array[i + 1].item(),
+                                                  byte_array[i + 2].item(), byte_array[i + 3].item(),
+                                                  byte_array[i + 4].item(), byte_array[i + 5].item(),
+                                                  byte_array[i + 6].item()))
+            except IndexError:
+                print("liste leer")
+                particle_state_values.append((comet_id, mass, int(particle_no.item()),
+                                              byte_array[i].item(), byte_array[i + 1].item(),
+                                              byte_array[i + 2].item(), byte_array[i + 3].item(),
+                                              byte_array[i + 4].item(), byte_array[i + 5].item(),
+                                              byte_array[i + 6].item()))
 
         return particle_header_values, particle_state_values
 
