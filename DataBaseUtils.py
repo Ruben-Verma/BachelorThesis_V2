@@ -6,6 +6,7 @@ import numpy
 import spiceypy as spice
 from timeit import default_timer as timer
 
+
 class DataBaseUtils:
     # Creates Inputlist for the insertion into the table
     @staticmethod
@@ -21,6 +22,12 @@ class DataBaseUtils:
 
     @staticmethod
     def tuple_list_maker_structure(byte_array, comet_id, mass):
+        """
+        :param byte_array: Bytearray from Workunit file
+        :param comet_id: Id of comet
+        :param mass: mass of Workunit file
+        :return: List of particle States for Database Insertion
+        """
         particle_no = 0
         particle_state_values = []
         particle_header_values = []
@@ -114,6 +121,10 @@ class DataBaseUtils:
 
     @staticmethod
     def mass_to_int(mass):
+        """
+        :param mass: mass from Workunit File
+        :return: The corresponding Integer for it's mass
+        """
         if math.isclose(1.000000e-08, mass, abs_tol=3.1e-09):
             return 0
         if math.isclose(1.640000e-08, mass, abs_tol=1e-09):
@@ -133,6 +144,10 @@ class DataBaseUtils:
 
     @staticmethod
     def tuplelist_into_csv_buffer(list):
+        """
+        :param list:List of Particle States
+        :return: In-file CSV object for insertion for Postgresql
+        """
         buffer = io.StringIO()
         writer = csv.writer(buffer, delimiter="|", quoting=csv.QUOTE_MINIMAL)
         writer.writerows(list)
@@ -141,6 +156,12 @@ class DataBaseUtils:
 
     @staticmethod
     def calculate_maximum_time_difference(byte_array, time_difference_list, mass):
+        """
+        :param byte_array: Bytearray from Workunitfile
+        :param time_difference_list: List of Timedifferences between Particles States for each mass
+        :param mass: mass of workunit file
+        :return: Updated maximum time difference list
+        """
         continued = False
         for i in range(7, len(byte_array) - 7, 7):
             if continued:
@@ -150,7 +171,7 @@ class DataBaseUtils:
                 continued = True
                 continue
             if (byte_array[i + 13] - byte_array[i + 6]) > time_difference_list[mass]:
-                time_difference_list[mass] = (byte_array[i + 13] - byte_array[i+6])
+                time_difference_list[mass] = (byte_array[i + 13] - byte_array[i + 6])
 
     @staticmethod
     def calculate_nearest_particle(particle_list, time):
@@ -163,12 +184,46 @@ class DataBaseUtils:
         return nearest_particle
 
     @staticmethod
-    def calculate_spice_extrapolation(particle, time):
-        start = timer()
-        spice_array = [particle[3], particle[4], particle[5], particle[6], particle[7], particle[8]]
-        mu_sun = 132712440023.31  # used for spice calculation
-        orbital_elements = spice.oscelt(numpy.array(spice_array), particle[9], mu_sun)
-        state = spice.conics(orbital_elements, time)
+    def calculate_nearest_particles(particle_list, time):
+        """
+        :param particle_list: Lists of particles from the previous query
+        :param time: input time
+        :return: List of all particles which are the nearest in the given time
+        """
+        updated_particle_list = []
+        previous_particle_mass = particle_list[0][1]  # Preloades the variables for the loop
+        previous_particle_number = particle_list[0][2]
+        min_difference_particle = particle_list[0]
+        min_time_difference_between_particle = particle_list[0][9]
+
+        for particle in particle_list:
+            if particle[1] != previous_particle_mass or particle[2] != previous_particle_number:  # checks for changing particle mass or Number
+                updated_particle_list.append(min_difference_particle)  # appends the previous particle in list and preloads the variables again
+                previous_particle_mass = particle[1]
+                previous_particle_number = particle[2]
+                min_difference_particle = particle
+                min_time_difference_between_particle = particle[9]
+            if abs(particle[9] - time) < min_time_difference_between_particle:  # changes the minimal particle if the new particle is nearer the given time
+                min_difference_particle = particle
+                min_time_difference_between_particle = abs(particle[9] - time)
+
+        return updated_particle_list
+
+    @staticmethod
+    def calculate_spice_extrapolation(particles, time):
+        """
+        :param particles: list of particles which needs to be extrapolated
+        :param time: input time
+        :return: extrapolated particle in the given time
+        """
+        extrapolation_list = []
+        start = timer()  # used for spice calculation
+        mu_sun = 132712440023.31
+        for particle in particles:  # extrapolates each particles and appends to return list
+            spice_array = particle[3:9]
+            orbital_elements = spice.oscelt(spice_array, particle[9], mu_sun)
+            state = spice.conics(orbital_elements, time)
+            extrapolation_list.append(state)
         end = timer()
         print(end - start)
-        return state
+        return extrapolation_list

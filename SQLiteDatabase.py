@@ -103,7 +103,7 @@ class SQLiteDatabase:
     def search_particle(self, time1, time2):
         start = timer()
         self.myCursor.execute(
-            "SELECT * FROM ParticleStates WHERE ETinSeconds BETWEEN ? AND ? ORDER BY ETinSeconds ASC",
+            "SELECT * FROM ParticleStates WHERE ETinSeconds BETWEEN ? AND ? ORDER BY Mass,ParticleNo",
             (time1, time2))
         result = self.myCursor.fetchall()
         end = timer()
@@ -124,12 +124,15 @@ class SQLiteDatabase:
     def particle_analyzer_spice(self, time):
         self.myCursor.execute("SELECT MAX(MaxTimeDifference) FROM Population")
         max_time_difference = self.myCursor.fetchall()[0][0]
+        max_time_difference = np.ceil(max_time_difference/2)
 
-        state_list = self.search_particle(max(time-max_time_difference, 0), time)
-        particle = DataBaseUtils.calculate_nearest_particle(state_list, time)
-        return DataBaseUtils.calculate_spice_extrapolation(particle,time)
+        state_list = self.search_particle(max(time-max_time_difference, 0), time + max_time_difference)
+        print(len(state_list))
+        particles = DataBaseUtils.calculate_nearest_particles(state_list, time)
+        print(particles)
+        return DataBaseUtils.calculate_spice_extrapolation(particles, time)
 
 sqlitetest = SQLiteDatabase("ruben")
 
-test = sqlitetest.particle_analyzer_spice(26540100)
-print(test)
+result = sqlitetest.particle_analyzer_spice(300000000)
+
