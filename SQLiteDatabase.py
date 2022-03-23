@@ -5,7 +5,6 @@ import numpy as np
 from DataBaseUtils import DataBaseUtils
 
 
-
 class SQLiteDatabase:
 
     # Initialize SQLiteDatabase Object and creates
@@ -124,15 +123,12 @@ class SQLiteDatabase:
     def particle_analyzer_spice(self, time):
         self.myCursor.execute("SELECT MAX(MaxTimeDifference) FROM Population")
         max_time_difference = self.myCursor.fetchall()[0][0]
-        max_time_difference = np.ceil(max_time_difference/2)
+        max_time_difference = np.ceil(max_time_difference / 2)
 
-        state_list = self.search_particle(max(time-max_time_difference, 0), time + max_time_difference)
-        print(len(state_list))
+        state_list = self.search_particle(max(time - max_time_difference, 0), time + max_time_difference)
         particles = DataBaseUtils.calculate_nearest_particles(state_list, time)
-        print(particles)
         return DataBaseUtils.calculate_spice_extrapolation(particles, time)
 
+
 sqlitetest = SQLiteDatabase("ruben")
-
 result = sqlitetest.particle_analyzer_spice(300000000)
-

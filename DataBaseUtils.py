@@ -206,7 +206,7 @@ class DataBaseUtils:
             if abs(particle[9] - time) < min_time_difference_between_particle:  # changes the minimal particle if the new particle is nearer the given time
                 min_difference_particle = particle
                 min_time_difference_between_particle = abs(particle[9] - time)
-
+        updated_particle_list.append(min_difference_particle)  # Very last particle must be inserted manually
         return updated_particle_list
 
     @staticmethod
@@ -227,3 +227,12 @@ class DataBaseUtils:
         end = timer()
         print(end - start)
         return extrapolation_list
+
+    @staticmethod
+    def calculate_spice_test():
+        spice.furnsh("/Users/rubenverma/Downloads/meta_kernel.txt")
+        et = math.trunc(spice.str2et("2024 December 14, 22:00:00"))
+        state, lt = spice.spkezr("EARTH", et, "ECLIPJ2000", "NONE", "SSB")
+        print("Earth State Vector:")
+        print(state)
+        # Todo: compare state Vektor with future comet state vektor after spice calculation
