@@ -14,6 +14,13 @@ class PostGreSQLDatabase:
     # Initialize MariaDBDatabase Object and creates
     # Cursor and Table to interact with the Database
     def __init__(self, host, user, password, database):
+        """
+        initialize connection object of postgres database
+        :param host: "127.0.0.1" or ip address of server
+        :param user: user name of database
+        :param password: password of database
+        :param database: name of database
+        """
         try:
             self.con = psycopg2.connect(host=host, user=user, password=password, database=database)
             self.con.autocommit = True
@@ -23,6 +30,10 @@ class PostGreSQLDatabase:
         self.create_table_structure()
 
     def create_table_structure(self):
+        """
+        Creates table structure for database for converted Workunit files with
+        Population, Particle Header and Particle States
+        """
         try:
             self.myCursor.execute("""CREATE TABLE Population(
                 Cometid integer,
@@ -55,19 +66,27 @@ class PostGreSQLDatabase:
         except psycopg2.DatabaseError:
             pass
 
-    # Searches particle given a timespan time1 - time 2
     def search_particle(self, time1, time2):
+        """
+        :param time1: time for oldest particle
+        :param time2: time for youngest particle
+        :return: all particles between time1 and time2
+        """
         start = timer()
         self.myCursor.execute(
-            "SELECT * FROM particlestates WHERE ETinSeconds BETWEEN ? AND ? ORDER BY ETinSeconds ASC",
+            "SELECT * FROM particlestates WHERE ETinSeconds BETWEEN %s AND %s ORDER BY Mass,ParticleNo",
             (time1, time2))
         result = self.myCursor.fetchall()
         end = timer()
         print(end - start)
         return result
 
-    # Inserts data into the table using parameter lists and csv buffer to increase insert performance
     def insert_comet(self, path):
+        """
+        Inserts data into the table using parameter lists
+        and csv buffer to increase insert performance
+        :param path: filepath for comet
+        """
         particle_header_list = []
         maximum_time_difference_list = [0, 0, 0, 0, 0, 0, 0, 0]
         beta_value_list = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -117,18 +136,32 @@ class PostGreSQLDatabase:
                                       [(comet_id, i, beta_value_list[i], maximum_time_difference_list[i].item()) for i
                                        in range(0, len(maximum_time_difference_list))])
 
-    # Defines a testcase how fast Database retrieves Data when queries overlap
-    # Timespan is one year
     def one_year_testcase(self):
+        """
+        Defines a testcase how fast Database retrieves Data when queries overlap
+        Timespan is one year
+        """
         self.search_particle(1000000000, 1031536000)
         self.search_particle(1000172800, 1031708800)
 
-    # Same semantics as oneYearTestcase Method but timespan are two years
     def two_year_testcase(self):
+        """
+        Same semantics as oneYearTestcase Method but timespan are two years
+        """
         self.search_particle(1000000000, 1063072000)
         self.search_particle(1063244800, 1094780800)
 
+    def particle_analyzer_spice(self, time):
+        """
+        :param time: Time for retrieval
+        :return: Extrapolated particles regarding the input time
+        """
+        self.myCursor.execute("SELECT MAX(MaxTimeDifference) FROM Population")
+        max_time_difference = self.myCursor.fetchall()[0][0]
+
+        state_list = self.search_particle(max(time - max_time_difference, 0), time)
+        particles = DataBaseUtils.calculate_nearest_particles(state_list, time)
+        return DataBaseUtils.calculate_spice_extrapolation(particles, time)
+
 
 postGresTest = PostGreSQLDatabase("127.0.0.1", "postgres", "mysecretpassword", "postgres")
-
-cProfile.run("""postGresTest.insert_comet("/Users/rubenverma/Documents/Bachelorarbeit/1002378")""")

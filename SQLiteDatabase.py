@@ -1,7 +1,10 @@
+import cProfile
 import os
 import sqlite3
 from timeit import default_timer as timer
 import numpy as np
+from matplotlib import pyplot as plt
+
 from DataBaseUtils import DataBaseUtils
 
 
@@ -10,12 +13,18 @@ class SQLiteDatabase:
     # Initialize SQLiteDatabase Object and creates
     # Cursor and Table to interact with the Database
     def __init__(self, database_name):
+        """
+        initializes database with given name
+        :param database_name:
+        """
         self.con = sqlite3.connect(database_name + '.db', isolation_level='DEFERRED')
         self.myCursor = self.con.cursor()
         self.create_table_structure()
 
-    # Creates SQL Table
     def create_table_structure(self):
+        """
+        Creates table structure for database
+        """
         try:
             self.myCursor.execute("""CREATE TABLE Population(
                 Cometid integer,
@@ -49,6 +58,10 @@ class SQLiteDatabase:
             pass
 
     def insert_comet(self, path):
+        """
+        :param path: Path of Comet file
+        Inserts one Comet into the Database with 3 different tables
+        """
         particle_header_list = []
         maximum_time_difference_list = [0, 0, 0, 0, 0, 0, 0, 0]
         beta_value_list = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -98,8 +111,12 @@ class SQLiteDatabase:
                                    in range(0, len(maximum_time_difference_list))])
         self.con.commit()
 
-    # Searches particle given a timespan time1 - time 2
     def search_particle(self, time1, time2):
+        """
+        :param time1: time for oldest particle
+        :param time2: time for youngest particle
+        :return: all particles between time1 and time2
+        """
         start = timer()
         self.myCursor.execute(
             "SELECT * FROM ParticleStates WHERE ETinSeconds BETWEEN ? AND ? ORDER BY Mass,ParticleNo",
@@ -109,26 +126,30 @@ class SQLiteDatabase:
         print(end - start)
         return result
 
-    # Defines a testcase how fast Database retrieves Data when queries overlap
-    # Timespan is one year
     def one_year_testcase(self):
+        """
+        Defines a testcase how fast Database retrieves Data when queries overlap
+        Timespan is one year
+        """
         self.search_particle(1000000000, 1031536000)
         self.search_particle(1000172800, 1031708800)
 
-    # Same semantics as oneYearTestcase Method but timespan are two years
     def two_year_testcase(self):
+        """
+        Defines a testcase how fast Database retrieves Data when queries overlap
+        Timespan is two years
+        """
         self.search_particle(1000000000, 1063072000)
         self.search_particle(1063244800, 1094780800)
 
     def particle_analyzer_spice(self, time):
+        """
+        :param time: Time for retrieval
+        :return: Extrapolated particles regarding the input time
+        """
         self.myCursor.execute("SELECT MAX(MaxTimeDifference) FROM Population")
         max_time_difference = self.myCursor.fetchall()[0][0]
-        max_time_difference = np.ceil(max_time_difference / 2)
 
-        state_list = self.search_particle(max(time - max_time_difference, 0), time + max_time_difference)
+        state_list = self.search_particle(max(time - max_time_difference, 0), time)
         particles = DataBaseUtils.calculate_nearest_particles(state_list, time)
         return DataBaseUtils.calculate_spice_extrapolation(particles, time)
-
-
-sqlitetest = SQLiteDatabase("ruben")
-result = sqlitetest.particle_analyzer_spice(300000000)

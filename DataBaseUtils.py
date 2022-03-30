@@ -8,9 +8,14 @@ from timeit import default_timer as timer
 
 
 class DataBaseUtils:
-    # Creates Inputlist for the insertion into the table
+
     @staticmethod
     def tuple_list_maker(byte_array):
+        """
+        deprecated method but not deleted until bachelorthesis ends
+        :param byte_array:
+        :return:
+        """
         tuple_list = []
 
         for i in range(0, len(byte_array), 7):
@@ -61,6 +66,11 @@ class DataBaseUtils:
 
     @staticmethod
     def sql_string_maker_structure(byte_array, comet_id, mass):
+        """
+        deprecated method but not deleted until bachelorthesis ends
+        :param byte_array:
+        :return:
+        """
         particle_no = 0
         sql_string_particle_state = []
         sql_string_particle_header = []
@@ -102,22 +112,6 @@ class DataBaseUtils:
             sql_string_particle_state.append(")")
             sql_string_particle_state.append(",")
         return sql_string_particle_header, "".join(sql_string_particle_state)
-
-    # Changes Postgres Server configuration to increase performance
-    # This configuration suits the Macbook Pro 13' 2016
-    @staticmethod
-    def postgresql_change_system_configuration(postgres_database_object):
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET max_connections = '200' ")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET shared_buffers = '2GB' ")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET effective_cache_size = '6GB' ")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET maintenance_work_mem = '512MB' ")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET checkpoint_completion_target = '0.9' ")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET wal_buffers = '16MB' ")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET default_statistics_target = '100' ")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET random_page_cost = '1.1'")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET work_mem = '5242kB' ")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET min_wal_size = '1GB' ")
-        postgres_database_object.myCursor.execute("ALTER SYSTEM SET max_wal_size = '4GB' ")
 
     @staticmethod
     def mass_to_int(mass):
@@ -174,16 +168,6 @@ class DataBaseUtils:
                 time_difference_list[mass] = (byte_array[i + 13] - byte_array[i + 6])
 
     @staticmethod
-    def calculate_nearest_particle(particle_list, time):
-        min = particle_list[0][9]
-        nearest_particle = particle_list[0]
-        for particle in particle_list:
-            if (time - particle[9]) < min:
-                min = particle[9]
-                nearest_particle = particle
-        return nearest_particle
-
-    @staticmethod
     def calculate_nearest_particles(particle_list, time):
         """
         :param particle_list: Lists of particles from the previous query
@@ -203,7 +187,7 @@ class DataBaseUtils:
                 previous_particle_number = particle[2]
                 min_difference_particle = particle
                 min_time_difference_between_particle = particle[9]
-            if abs(particle[9] - time) < min_time_difference_between_particle:  # changes the minimal particle if the new particle is nearer the given time
+            if abs(particle[9] - time) < min_time_difference_between_particle and particle[9] <= time:  # changes the minimal particle if the new particle is nearer the given time
                 min_difference_particle = particle
                 min_time_difference_between_particle = abs(particle[9] - time)
         updated_particle_list.append(min_difference_particle)  # Very last particle must be inserted manually
@@ -230,9 +214,13 @@ class DataBaseUtils:
 
     @staticmethod
     def calculate_spice_test():
+        """
+
+        :return:
+        """
         spice.furnsh("/Users/rubenverma/Downloads/meta_kernel.txt")
         et = math.trunc(spice.str2et("2024 December 14, 22:00:00"))
         state, lt = spice.spkezr("EARTH", et, "ECLIPJ2000", "NONE", "SSB")
         print("Earth State Vector:")
         print(state)
-        # Todo: compare state Vektor with future comet state vektor after spice calculation
+        # Todo: compare state Vektor with future comet state vektor after spice calculation after Bachelorthesis

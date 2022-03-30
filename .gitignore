@@ -8,3 +8,7 @@
 __pycache__/DataBaseUtils.cpython-39.pyc
 
 *.pyc
+
+*.png
+
+__pycache__/
