@@ -1,0 +1,14 @@
+
+*.db
+
+.DS_Store
+
+.idea/
+
+__pycache__/DataBaseUtils.cpython-39.pyc
+
+*.pyc
+
+*.png
+
+__pycache__/
