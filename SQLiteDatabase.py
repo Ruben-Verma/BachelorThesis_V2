@@ -153,3 +153,64 @@ class SQLiteDatabase:
         state_list = self.search_particle(max(time - max_time_difference, 0), time)
         particles = DataBaseUtils.calculate_nearest_particles(state_list, time)
         return DataBaseUtils.calculate_spice_extrapolation(particles, time)
+
+    def insert_comet_sorted(self, path):
+        """
+        :param path: Path of Comet file
+        Inserts one Comet into the Database with 3 different tables
+        """
+        particle_header_list = []
+        particle_states = []
+        maximum_time_difference_list = [0, 0, 0, 0, 0, 0, 0, 0]
+        beta_value_list = [0, 0, 0, 0, 0, 0, 0, 0]
+
+        total_time = 0
+        comet_number = 1
+        comet_id = path[len(path) - 7:len(path)]
+        file_list = []
+
+        with os.scandir(path) as it:
+            for entry in it:
+                if entry.name.endswith(".ctwu") and entry.is_file():
+                    file_list.append(entry.path)
+
+        file_list.sort()
+
+        for path in file_list:
+            with open(path, 'rb') as file:
+                float_values = np.array(np.fromfile(file, dtype=np.float32))
+
+            comet_mass = DataBaseUtils.mass_to_int(float_values[2])
+            beta_value_list[comet_mass] = float_values[4].item()
+
+            DataBaseUtils.calculate_maximum_time_difference(float_values, maximum_time_difference_list, comet_mass)
+
+            start = timer()
+
+            print(comet_number)
+
+            comet_number = comet_number + 1
+            ph_list, particle_state_list = DataBaseUtils.tuple_list_maker_structure(float_values, comet_id, comet_mass)
+
+            particle_states.extend(particle_state_list)
+
+            end = timer()
+            particle_header_list.extend(ph_list)
+            total_time += (end - start)
+            print(end - start)
+        particle_states.sort(key=lambda tup: tup[9])
+        print(total_time)
+        self.myCursor.executemany(
+            "INSERT INTO ParticleStates(Cometid, Mass, ParticleNo,ParticleState_x,ParticleState_y,ParticleState_z,ParticleState_Vx,ParticleState_Vy,ParticleState_Vz,ETinSeconds) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            particle_states)
+        self.myCursor.executemany(
+            "INSERT INTO ParticleHeader(Cometid,Mass,ParticleNo,Multiplicationfactor) values (?,?,?,?)",
+            particle_header_list)
+        self.myCursor.executemany("INSERT INTO Population(Cometid,Mass,beta,MaxTimeDifference) values (?,?,?,?)",
+                                  [(comet_id, i, beta_value_list[i], maximum_time_difference_list[i].item()) for i
+                                   in range(0, len(maximum_time_difference_list))])
+        self.con.commit()
+
+sqLiteTest = SQLiteDatabase("ruben")
+
+sqLiteTest.insert_comet_sorted("/Users/rubenverma/Documents/Bachelor/Bachelorarbeit/1002378")
