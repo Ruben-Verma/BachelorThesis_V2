@@ -61,10 +61,30 @@ class PostGreSQLDatabase:
                 ParticleState_Vy FLOAT,
                 ParticleState_Vz FLOAT,
                 ETinSeconds FLOAT
-             )
+             ) Partition by range (ETinSeconds)
                   """)
-        except psycopg2.DatabaseError:
-            pass
+            self.myCursor.execute(
+                """Create Table Particle1980to1990 Partition of ParticleStates for values from (-632910000) to (-316454999)""")
+            self.myCursor.execute(
+                """Create Table Particle1990to2000 Partition of ParticleStates for values from (-316454998) to (-1)""")
+            self.myCursor.execute(
+                """Create Table Particle2000to2010 Partition of ParticleStates for values from (0) to (316454999)""")
+            self.myCursor.execute(
+                """Create Table Particle2010to2020 Partition of ParticleStates for values from (316455000) to (632909999)""")
+            self.myCursor.execute(
+                """Create Table Particle2020to2030 Partition of ParticleStates for values from (632910000) to (949364999)""")
+            self.myCursor.execute(
+                """Create Table Particle2030to2040 Partition of ParticleStates for values from (949365000) to (1265819999)""")
+            self.myCursor.execute(
+                """Create Table Particle2040to2050 Partition of ParticleStates for values from (1265820000) to (1582274999)""")
+            self.myCursor.execute(
+                """Create Table Particle2050to2060 Partition of ParticleStates for values from (1582275000) to (1898729999)""")
+            self.myCursor.execute(
+                """Create Table Particle2060to2070 Partition of ParticleStates for values from (1898730000) to (2215184999)""")
+            self.myCursor.execute(
+                """Create Table Particle2070to2080 Partition of ParticleStates for values from (2215185000) to (2531640000)""")
+        except psycopg2.DatabaseError as e:
+            print(e)
 
     def search_particle(self, time1, time2):
         """
@@ -165,3 +185,4 @@ class PostGreSQLDatabase:
 
 
 postGresTest = PostGreSQLDatabase("127.0.0.1", "postgres", "mysecretpassword", "postgres")
+postGresTest.particle_analyzer_spice(787485669)
