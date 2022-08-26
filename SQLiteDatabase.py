@@ -169,13 +169,17 @@ class SQLiteDatabase:
         sorted(state_list, key=lambda x: x[9])
         i = 0
         for time in times:
-            result_list.append(DataBaseUtils.calculate_nearest_particles_multiple(state_list, time, max_time_difference))
+            result_list.append(
+                DataBaseUtils.calculate_nearest_particles_multiple(state_list, time, max_time_difference))
             print(len(result_list[i]))
-            i = i+1
+            i = i + 1
 
         i = 0
         for time in times:
             extrapolation_list.append(DataBaseUtils.calculate_spice_extrapolation(result_list[i], time))
+
+        return extrapolation_list
+
 
 timestamps = [787485669, 787485679, 787485689, 787485699, 787485709, 787485719, 787485729, 787485739,
               787485749, 787485759, 787485769, 787485779, 787485789, 787485799, 787485809, 787485819,

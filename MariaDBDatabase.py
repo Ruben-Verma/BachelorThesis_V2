@@ -188,5 +188,6 @@ class MariaDBDatabase:
         for time in times:
             extrapolation_list.append(DataBaseUtils.calculate_spice_extrapolation(result_list[i], time))
 
+        return extrapolation_list
 
 testDatabase = MariaDBDatabase("127.0.0.1", 3306, "root", "my-secret-pw", "COMETS")

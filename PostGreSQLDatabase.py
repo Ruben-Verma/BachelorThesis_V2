@@ -187,5 +187,7 @@ class PostGreSQLDatabase:
         for time in times:
             extrapolation_list.append(DataBaseUtils.calculate_spice_extrapolation(result_list[i], time))
 
+        return extrapolation_list
 
+    
 postGresTest = PostGreSQLDatabase("127.0.0.1", "postgres", "mysecretpassword", "postgres")
