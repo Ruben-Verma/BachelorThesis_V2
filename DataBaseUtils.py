@@ -198,7 +198,7 @@ class DataBaseUtils:
         """
         :param particles: list of particles which needs to be extrapolated
         :param time: input time
-        :return: extrapolated particle in the given time
+        :return: extrapolated particles in the given time
         """
         extrapolation_list = []
         start = timer()  # used for spice calculation
@@ -224,3 +224,35 @@ class DataBaseUtils:
         print("Earth State Vector:")
         print(state)
         # Todo: compare state Vektor with future comet state vektor after spice calculation after Bachelorthesis
+    @staticmethod
+    def get_index_from_timestamp(list_of_tuple, time):
+        return [x for x, y in enumerate(list_of_tuple) if y[9] == time]
+
+    @staticmethod
+    def calculate_nearest_particles_multiple(particle_list, time, max_time_difference):
+        """
+        :param particle_list: Lists of particles from the previous query
+        :param time: input time
+        :return: List of all particles which are the nearest in the given time
+        """
+        updated_particle_list = []
+        previous_particle_mass = particle_list[0][1]  # Preloades the variables for the loop
+        previous_particle_number = particle_list[0][2]
+        min_difference_particle = particle_list[0]
+        min_time_difference_between_particle = particle_list[0][9]
+
+        for particle in particle_list:
+            if particle[1] != previous_particle_mass or particle[
+                2] != previous_particle_number:  # checks for changing particle mass or Number
+                updated_particle_list.append(
+                    min_difference_particle)  # appends the previous particle in list and preloads the variables again
+                previous_particle_mass = particle[1]
+                previous_particle_number = particle[2]
+                min_difference_particle = particle
+                min_time_difference_between_particle = particle[9]
+            if abs(particle[9] - time) < min_time_difference_between_particle and particle[
+                9] <= time and (abs(particle[9] - time) < max_time_difference):  # changes the minimal particle if the new particle is nearer the given time
+                min_difference_particle = particle
+                min_time_difference_between_particle = abs(particle[9] - time)
+        updated_particle_list.append(min_difference_particle)  # Very last particle must be inserted manually
+        return updated_particle_list

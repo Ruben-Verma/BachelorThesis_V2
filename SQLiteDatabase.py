@@ -153,3 +153,36 @@ class SQLiteDatabase:
         state_list = self.search_particle(max(time - max_time_difference, 0), time)
         particles = DataBaseUtils.calculate_nearest_particles(state_list, time)
         return DataBaseUtils.calculate_spice_extrapolation(particles, time)
+
+    def multiple_particle_analyzer_spice(self, times):
+        """
+        :param time: Multiple Timestamps for retrieval
+        :return: Extrapolated particles regarding the input times
+        """
+        sorted(times)
+        result_list = []
+        extrapolation_list = []
+        self.myCursor.execute("SELECT MAX(MaxTimeDifference) FROM Population")
+
+        max_time_difference = self.myCursor.fetchall()[0][0]
+        state_list = self.search_particle(times[0] - max_time_difference, times[-1])
+        sorted(state_list, key=lambda x: x[9])
+        i = 0
+        for time in times:
+            result_list.append(DataBaseUtils.calculate_nearest_particles_multiple(state_list, time, max_time_difference))
+            print(len(result_list[i]))
+            i = i+1
+
+        i = 0
+        for time in times:
+            extrapolation_list.append(DataBaseUtils.calculate_spice_extrapolation(result_list[i], time))
+
+timestamps = [787485669, 787485679, 787485689, 787485699, 787485709, 787485719, 787485729, 787485739,
+              787485749, 787485759, 787485769, 787485779, 787485789, 787485799, 787485809, 787485819,
+              787485829, 787485839, 787485849, 787485859, 787485869, 787485879, 787485889, 787485899,
+              787485909, 787485919, 787485929, 787485939, 787485949, 787485959]
+
+sqlitetest = SQLiteDatabase("ruben")
+sqlitetest.myCursor.execute("SELECT MAX(MaxTimeDifference) FROM Population")
+max_time_difference = sqlitetest.myCursor.fetchall()[0][0]
+sqlitetest.multiple_particle_analyzer_spice(timestamps)

@@ -1,6 +1,6 @@
 import io
 import os
-
+import threading
 import psycopg2
 from timeit import default_timer as timer
 import numpy as np
@@ -162,6 +162,30 @@ class PostGreSQLDatabase:
         state_list = self.search_particle(max(time - max_time_difference, 0), time)
         particles = DataBaseUtils.calculate_nearest_particles(state_list, time)
         return DataBaseUtils.calculate_spice_extrapolation(particles, time)
+
+    def multiple_particle_analyzer_spice(self, times):
+        """
+        :param time: Multiple Timestamps for retrieval
+        :return: Extrapolated particles regarding the input times
+        """
+        sorted(times)
+        result_list = []
+        extrapolation_list = []
+        self.myCursor.execute("SELECT MAX(MaxTimeDifference) FROM Population")
+
+        max_time_difference = self.myCursor.fetchall()[0][0]
+        state_list = self.search_particle(times[0] - max_time_difference, times[-1])
+        sorted(state_list, key=lambda x: x[9])
+        i = 0
+        for time in times:
+            result_list.append(
+                DataBaseUtils.calculate_nearest_particles_multiple(state_list, time, max_time_difference))
+            print(len(result_list[i]))
+            i = i + 1
+
+        i = 0
+        for time in times:
+            extrapolation_list.append(DataBaseUtils.calculate_spice_extrapolation(result_list[i], time))
 
 
 postGresTest = PostGreSQLDatabase("127.0.0.1", "postgres", "mysecretpassword", "postgres")
